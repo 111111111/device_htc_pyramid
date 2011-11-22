@@ -24,11 +24,11 @@ loglevel 3
 
 # Backward compatibility
     symlink /system/etc /etc
-    mount debugfs /sys/kernel/debug /sys/kernel/debug
+    symlink /sys/kernel/debug /d
 
 # Right now vendor lives on the same filesystem as system,
 # but someday that may change.
-    symlink /system/vendor /vendor
+#    symlink /system/vendor /vendor
 
 # create mountpoints
     mkdir /mnt 0775 root system
@@ -70,9 +70,8 @@ loglevel 3
     write /proc/sys/kernel/panic_on_oops 1
     write /proc/sys/kernel/hung_task_timeout_secs 0
     write /proc/cpu/alignment 4
-    write /proc/sys/kernel/sched_latency_ns 5000000
-    write /proc/sys/kernel/sched_wakeup_granularity_ns 100000
-    write /proc/sys/kernel/sched_min_granularity_ns 100000
+    write /proc/sys/kernel/sched_latency_ns 10000000
+    write /proc/sys/kernel/sched_wakeup_granularity_ns 2000000
     write /proc/sys/kernel/sched_compat_yield 1
     write /proc/sys/kernel/sched_child_runs_first 0
 
@@ -193,9 +192,17 @@ on post-fs
     chown root root /cache/lost+found
     chmod 0770 /cache/lost+found
 
-    # HTC add: double check the perms of /data/data for already existed case
-    chown system system /data/data
-    chmod 0771 /data/data
+    # allow net_raw to have access to /dev/socket directory
+    chown root net_raw /dev/socket
+    chmod 0775 /dev/socket
+
+    # allow system to modify cpufreq control files
+    chown root system /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    chown root system /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chown root system /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+    chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
 
 on boot
 # basic network init
@@ -238,19 +245,14 @@ on boot
 
     write /proc/sys/vm/overcommit_memory 1
     write /proc/sys/vm/min_free_order_shift 4
-    write /proc/sys/vm/oom_dump_tasks 1
-    write /sys/module/lowmemorykiller/parameters/minfree 3584,4096,8192,10240,11264,12288
-    write /sys/module/lowmemorykiller/parameters/minfile 3584,4096,8192,10240,11264,12288
-    write /sys/module/lowmemorykiller/parameters/check_filepages 1
+    write /sys/module/lowmemorykiller/parameters/minfree 2048,3072,4096,6144,7168,8192
 
     # Set init its forked children's oom_adj.
     write /proc/1/oom_adj -16
 
     # Tweak background writeout
     write /proc/sys/vm/dirty_expire_centisecs 200
-    write /proc/sys/vm/dirty_background_bytes 1024000
-    write /proc/sys/vm/dirty_bytes 20480000
-    write /proc/sys/vm/highmem_is_dirtyable 1
+    write /proc/sys/vm/dirty_background_ratio  5
 
     # Permissions for System Server and daemons.
     chown radio system /sys/android_power/state
@@ -261,39 +263,21 @@ on boot
     chown radio system /sys/power/state
     chown radio system /sys/power/wake_lock
     chown radio system /sys/power/wake_unlock
-    chown radio system /sys/module/gpio_event/parameters/phone_call_status
-    chmod 0444 /sys/android_camera/fps_mode
-    chmod 0660 /sys/android_camera2/htcwc
-    chown media system /sys/android_camera2/htcwc
-    chown media system /sys/android_camera/cam3Dmode
-    chown radio system /sys/camera_led_status/led_ril_status
-    chown system system /sys/camera_led_status/led_wimax_status
-    chown system system /sys/camera_led_status/led_hotspot_status
-    chown media system /sys/android_camera/cam_mode    
-    chown radio system /sys/class/cap_sense/sar/sleep
     chmod 0660 /sys/power/state
     chmod 0660 /sys/power/wake_lock
     chmod 0660 /sys/power/wake_unlock
-    chown system system /sys/camera_led_status/led_hotspot_status
-    chown system system /sys/class/timed_output/vibrator/enable
-    chown system system /sys/class/leds/flashlight/brightness
     chown system system /sys/class/leds/keyboard-backlight/brightness
     chown system system /sys/class/leds/lcd-backlight/brightness
     chown system system /sys/class/leds/button-backlight/brightness
-    chown system system /sys/class/leds/jogball-backlight/brightness
-    chown system system /sys/class/leds/caps/brightness
-    chown system system /sys/class/leds/func/brightness
     chown system system /sys/class/leds/red/brightness
     chown system system /sys/class/leds/green/brightness
-    chown system system /sys/class/leds/blue/brightness
+    chown system system /sys/class/leds/green/blink
     chown system system /sys/class/leds/amber/brightness
+    chown system system /sys/class/leds/amber/blink
+    chown system system /sys/class/leds/blue/brightness
     chown system system /sys/class/leds/red/device/grpfreq
     chown system system /sys/class/leds/red/device/grppwm
     chown system system /sys/class/leds/red/device/blink
-    chown system system /sys/class/leds/green/blink
-    chown system system /sys/class/leds/green/off_timer
-    chown system system /sys/class/leds/amber/blink
-    chown system system /sys/class/leds/amber/off_timer
     chown system system /sys/class/timed_output/vibrator/enable
     chown system system /sys/module/sco/parameters/disable_esco
     chown system system /sys/kernel/ipv4/tcp_wmem_min
@@ -303,85 +287,20 @@ on boot
     chown system system /sys/kernel/ipv4/tcp_rmem_def
     chown system system /sys/kernel/ipv4/tcp_rmem_max
     chown root radio /proc/cmdline
-    # HTC UI - BEGIN
-    chown system system /sys/class/leds/red/blink
-    chown system system /sys/class/leds/red/off_timer
-    chown system system /sys/class/leds/blue/blink
-    chown system system /sys/class/leds/blue/off_timer
-    chown system system /sys/class/leds/button-backlight-portrait/brightness
-    chown system system /sys/class/leds/button-backlight-landscape/brightness
-    chown system system /sys/class/leds/amber-portrait/brightness
-    chown system system /sys/class/leds/green-portrait/brightness
-    chown system system /sys/class/leds/blue-portrait/brightness
-    chown system system /sys/class/leds/amber-landscape/brightness
-    chown system system /sys/class/leds/green-landscape/brightness
-    chown system system /sys/class/leds/blue-landscape/brightness
-    chown system system /sys/class/leds/sharekey/brightness
-    chown system system /sys/class/leds/sharekey/breath_times
-    chown media media /sys/class/leds/green-camera/brightness
-    chown system system /sys/devices/virtual/htc_accessory/fm/flag
-    chown system system /sys/devices/virtual/htc_accessory/tty/flag
-    # HTC UI - END
-    # bluetooth update FM status to keypad
-    chown bluetooth bluetooth /sys/devices/platform/gpio-event.0/fm_radio
-
-#set radio_feedback permissions
-    chown radio radio /dev/radio_feedback
-    chmod 0660 /dev/radio_feedback
-    chown radio radio /dev/sdiotty0
-    chmod 0660 /dev/sdiotty0
-
-#set G-Sensor and Compass permissions
-    chown compass system /dev/akm8976_aot
-    chown compass system /dev/akm8976_daemon
-    chown compass system /dev/akm8973_aot
-    chown compass system /dev/akm8973_daemon
-    chown compass system /dev/akm8975_aot
-    chown compass system /dev/akm8975_daemon
-    chown compass system /dev/bma150
-    chmod 0640 /dev/akm8976_aot
-    chmod 0640 /dev/akm8976_daemon   
-    chmod 0640 /dev/akm8973_aot
-    chmod 0640 /dev/akm8973_daemon   
-    chmod 0640 /dev/akm8975_aot
-    chmod 0640 /dev/akm8975_daemon    
-    chmod 0640 /dev/bma150  
-
-#set ntrig touch permissions
-    chown system system dev/ntrig_touch
-    chmod 0666 dev/ntrig_touch
-
-#set atmel touch permissions
-    chown system system /sys/android_touch/unlock
-
-#set diag permissions
-    chown radio radio /dev/diag
-    chown radio radio /dev/diag_mdm
-    chown radio radio /dev/htcdiag
-    chown radio radio /dev/diag_arm9
-    chown radio radio /dev/btdiag
-    chmod 0660 /dev/diag
-    chmod 0660 /dev/diag_mdm
-    chmod 0660 /dev/htcdiag
-    chmod 0660 /dev/diag_arm9
-    chmod 0660 /dev/btdiag
 
 # Define TCP buffer sizes for various networks
 #   ReadMin, ReadInitial, ReadMax, WriteMin, WriteInitial, WriteMax,
     setprop net.tcp.buffersize.default 4096,87380,110208,4096,16384,110208
     setprop net.tcp.buffersize.wifi    4095,87380,110208,4096,16384,110208
-    setprop net.tcp.buffersize.hsdpa   4094,87380,393216,4096,16384,110208
-    setprop net.tcp.buffersize.umts    4094,87380,393216,4096,16384,110208
-    setprop net.tcp.buffersize.edge    4093,26280,393216,4096,16384,35040
-    setprop net.tcp.buffersize.gprs    4092,8760,393216,4096,8760,11680
-    setprop net.tcp.buffersize.lte     4094,87380,196608,4096,16384,196608
-    setprop net.tcp.buffersize.evdo_b  4094,87380,262144,4096,16384,262144
-    setprop net.tcp.buffersize.wimax   4096,221184,524288,4096,16384,110208
+    setprop net.tcp.buffersize.umts    4094,87380,110208,4096,16384,110208
+    setprop net.tcp.buffersize.edge    4093,26280,35040,4096,16384,35040
+    setprop net.tcp.buffersize.gprs    4092,8760,11680,4096,8760,11680
 
-    # Assign TCP buffer thresholds to be ceiling value of technology maximums
-    # Increased technology maximums should be reflected here.
-    write /proc/sys/net/core/rmem_max  262144
-    write /proc/sys/net/core/wmem_max  262144
+# Include extra init file
+    import /system/etc/init.local.rc
+
+# Run sysinit
+    exec /system/bin/sysinit
 
     class_start default
 
@@ -425,6 +344,7 @@ service vold /system/bin/vold
 
 service netd /system/bin/netd
     socket netd stream 0660 root system
+    socket dnsproxyd stream 0660 root inet
 
 service debuggerd /system/bin/debuggerd
 
@@ -435,7 +355,7 @@ service ril-daemon /system/bin/rild
     socket rild-htc-dmagent stream 660 radio system
     socket rild-htc-simapi stream 660 radio system
     user root
-    group radio cache inet misc audio sdcard_rw
+    group radio cache inet misc audio sdcard_rw net_admin net_raw
 
 service ril-ims-daemon /system/bin/rild_ims
     socket rild-ims stream 660 root radio
@@ -452,23 +372,16 @@ service zygote /system/bin/app_process -Xzygote /system/bin --zygote --start-sys
 service media /system/bin/mediaserver
     user media
     group system audio camera graphics inet net_bt net_bt_admin net_raw  qcom_oncrpc
-	ioprio rt 4
-
-service fusermount /system/bin/fusermount -u /data/htcfs
-    disabled
-    oneshot
-
-service htcfs /system/bin/htcfs /data/htcfs -f -o allow_other
-    onrestart restart fusermount
+    ioprio rt 4
 
 service bootanim /system/bin/bootanimation
     user graphics
-    group system audio graphics
+    group graphics
     disabled
     oneshot
 
 service dbus /system/bin/dbus-daemon --system --nofork
-    socket dbus stream 666 bluetooth bluetooth
+    socket dbus stream 660 bluetooth bluetooth
     user bluetooth
     group bluetooth net_bt_admin
 
@@ -530,4 +443,12 @@ service dumpstate /system/bin/dumpstate -s
     socket dumpstate stream 0660 shell log
     disabled
     oneshot
-
+    
+service ipd /system/bin/ipd
+    socket ipd stream 666 root inet
+    
+service charging /system/bin/charging
+    user root
+    group root
+    disabled
+    oneshot
