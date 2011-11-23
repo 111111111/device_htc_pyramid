@@ -71,9 +71,9 @@ PRODUCT_PACKAGES += \
     librs_jni \
     com.android.future.usb.accessory
 #    gps.pyramid \
-#    gralloc.msm8660 \
-#    copybit.msm8660 \
-#    overlay.default \
+    gralloc.msm8660 \
+    copybit.msm8660 \
+    overlay.default \
 #    libOmxCore \
 #    libaudio \
 
